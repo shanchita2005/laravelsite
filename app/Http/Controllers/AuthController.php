@@ -22,7 +22,7 @@ class AuthController extends Controller
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'password' => Hash::make($request->password)
+            'password' => md5::make($request->password)
         ]);
 
         return response()->json([
@@ -37,7 +37,7 @@ class AuthController extends Controller
         $credentials = $request->only('email', 'password');
 
         if (!$token = auth()->attempt($credentials)) {
-            return response()->json(['error' => 'Invalid credentials'], 401);
+            return response()->json(['error' => 'Invalid credentials for login'], 401);
         }
 
         return $this->respondWithToken($token);
