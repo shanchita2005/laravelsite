@@ -4,70 +4,55 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Tymon\JWTAuth\Facades\JWTAuth;
-use Tymon\JWTAuth\Exceptions\JWTException;
 
 class AuthController extends Controller
 {
-    // USER REGISTRATION
+    public function showRegister()
+    {
+        return view('auth.register');
+    }
+
     public function register(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:100',
-            'email' => 'required|string|email|unique:users',
-            'password' => 'required|min:6'
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users',
+            'password' => 'required|min:6|confirmed',
         ]);
 
-        $user = User::create([
+        User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'password' => md5::make($request->password)
+            'password' => Hash::make($request->password),
         ]);
 
-        return response()->json([
-            'message' => 'User registered successfully',
-            'user' => $user
-        ], 201);
+        return redirect('/login')->with('success', 'Registration successful! Please login.');
     }
 
-    // LOGIN
+    public function showLogin()
+    {
+        return view('auth.login');
+    }
+
     public function login(Request $request)
     {
-        $credentials = $request->only('email', 'password');
+        $request->validate([
+            'email' => 'required',
+            'password' => 'required',
+        ]);
 
-        if (!$token = auth()->attempt($credentials)) {
-            return response()->json(['error' => 'Invalid credentials for login'], 401);
+        if (Auth::attempt($request->only('email', 'password'))) {
+            return redirect('/dashboard');
         }
 
-        return $this->respondWithToken($token);
+        return back()->with('error', 'Invalid login credentials');
     }
 
-    // AUTHENTICATED USER
-    public function profile()
-    {
-        return response()->json(auth()->user());
-    }
-
-    // LOGOUT (Blacklist token)
     public function logout()
     {
-        auth()->logout();
-        return response()->json(['message' => 'User logged out successfully']);
-    }
-
-    // REFRESH TOKEN
-    public function refresh()
-    {
-        return $this->respondWithToken(auth()->refresh());
-    }
-
-    protected function respondWithToken($token)
-    {
-        return response()->json([
-            'access_token' => $token,
-            'token_type' => 'bearer',
-            'expires_in' => auth()->factory()->getTTL() * 60
-        ]);
+        Auth::logout();
+        return redirect('/login');
     }
 }
